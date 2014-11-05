@@ -1,8 +1,9 @@
 #!/usr/bin/python
-# Processes a list of arc file names to generate a CSV file of
-# metadata for each file
-# Assumes the file list groups crawls together in date ascending order
-
+"""
+Processes a list of arc file names to generate a CSV file of
+metadata for each file
+Assumes the file list groups crawls together in date ascending order
+"""
 import sys, getopt, re, csv, requests, time, random
 from datetime import datetime
 from time import strftime
@@ -30,10 +31,12 @@ def main(argv):
             fhi.close()
             fho.close()
 
-# Process an input list of Arc filenames, generating one CSV row for
-# each filename. Each row contains most of the values that will be needed for the
-# metadata (though not the checksum), as well as the allocation of each file to a drive
 def groupFiles(uname, pwd, fhi, writer):
+    """
+    Process an input list of Arc filenames, generating one CSV row for each 
+    filename. Each row contains most of the values that will be needed for the
+    metadata (though not the checksum), as well as the allocation of each file to a drive
+    """
     # define constants
     # list of available drives by label
     units = ['246','247','248','249','250','251','252','253','254','255']
@@ -141,9 +144,11 @@ def groupFiles(uname, pwd, fhi, writer):
     printCrawl(writer, crawl, date)     
     print "nonfits: " + `nonfits`
 
-# find the size of an Arc file by making a HEAD call to the url
-# and parsing the result
 def getArcSize(uname, pwd, url):
+    """
+    find the size of an Arc file by making a HEAD call to the url and parsing
+    the result.
+    """
     user_agent = {'User-agent': 'processLists'}
     h = requests.head(url.strip(),headers=user_agent,auth=HTTPBasicAuth(uname, pwd))
     print h.status_code
@@ -159,9 +164,11 @@ def getArcSize(uname, pwd, url):
         return 0
 
 
-# convert multiple date formats to ISO8601
-# Probably false assumption made that times are UTC
 def dateConvert(date):
+    """
+    Convert multiple date formats to ISO8601 Probably false assumption made
+    that times are UTC.
+    """
     # print date
     # just a year
     if len(date) == 4:
@@ -180,14 +187,18 @@ def dateConvert(date):
     return date
         
 
-# print all rows within a crawl folder, including the folder itself
 def printCrawl(writer, crawl, end_date):
+    """
+    Print all rows within a crawl folder, including the folder itself.
+    """
     for row in crawl:
         row['crawl_end'] = end_date
         writer.writerow(row)
         
-# get command line parameters        
 def getParms():
+    """
+    Get command line parameters.
+    """
     ifile = ofile = uname = pwd = ""
     try:
         myopts, args = getopt.getopt(sys.argv[1:],"u:p:i:o:")
@@ -217,9 +228,9 @@ def getParms():
     return (uname, pwd, ifile, ofile)
 
 def usage():
-        print("Usage: %s -u username -p password -i input -o output" % sys.argv[0])
-        sys.exit(2)
-    
+    print("Usage: %s -u username -p password -i input -o output" % sys.argv[0])
+    sys.exit(2)
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])
