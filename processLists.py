@@ -27,7 +27,7 @@ def main(argv):
                       'filesize', 'unit']
             writer = DictWriter(fho, delimiter=',', fieldnames=fields)
             writer.writerow(dict((fn,fn) for fn in fields))
-            print "Opened files successfully"
+            print "[INFO] Opened files successfully."
             groupFiles(uname, pwd, fhi, writer)
     except IOError:
         print "[ERROR] Can't open '%s' file !" % ifname
@@ -50,7 +50,6 @@ def groupFiles(uname, pwd, fhi, writer):
     blankRow = {'identifier':'', 'filename':'', 'folder': '', 'date_created':'', \
                 'checksum':'', 'series_number':'', 'creating_body':'IMF', \
                 'crawl_start':'', 'crawl_end':'', 'filesize':'', 'unit':''}
-
     # initialise variables
     # array of files for one folder
     crawl = []
@@ -142,7 +141,7 @@ def groupFiles(uname, pwd, fhi, writer):
 
     #need to flush final crawl
     printCrawl(writer, crawl, date)
-    print "nonfits: " + `nonfits`
+    print "[INFO] nonfits: " + `nonfits`
 
 def getArcSize(uname, pwd, url):
     """
@@ -187,7 +186,6 @@ def dateConvert(date):
         date = '*' + date # should never happen
     return date
         
-
 def printCrawl(writer, crawl, end_date):
     """
     Print all rows within a crawl folder, including the folder itself.
@@ -217,7 +215,6 @@ def getParms():
         elif o == '-p':
             pwd = a
 
-    print "[DEBUG] '%s' '%s' '%s' '%s'" % (ifile, ofile, uname, pwd)
     if not (uname and pwd and ifile and ofile):
         usage()
 
