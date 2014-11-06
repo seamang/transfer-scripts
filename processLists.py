@@ -11,6 +11,7 @@ import sys, re, requests, time, random
 from datetime import datetime
 from time import strftime
 from requests.auth import HTTPBasicAuth
+from hurry.filesize import size
 
 UNIT_SIZE = 1900000000000 # 1.9 TB (actual is 1,953,378,644,000). Needs python >= 2.5
 IDENTIFIER_BASE = 'file:///T:WORK/RW_32/content/'
@@ -72,7 +73,7 @@ def groupFiles(uname, pwd, fhi, writer):
         # establish the size of the file
         arcSize = getArcSize(uname, pwd, line)
         runningTotal += long(arcSize)
-        print "[INFO] Total arcs size : %s" % runningTotal
+        print "[INFO] Total arcs size : %s" % size(runningTotal)
         # check whether we neeed to move to a new drive
         if runningTotal >= UNIT_SIZE:
             unit = units.pop(0)
