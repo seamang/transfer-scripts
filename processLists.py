@@ -1,52 +1,55 @@
 #!/usr/bin/python
-# Processes a list of arc file names to generate a CSV file of
-# metadata for each file
-# Assumes the file list groups crawls together in date ascending order
+"""
+Processes a list of arc file names to generate a CSV file of
+metadata for each file
+Assumes the file list groups crawls together in date ascending order
+"""
 
-import sys, getopt, re, csv, requests, time, random
+from getopt import getopt, GetoptError
+from csv import DictWriter
+import sys, re, requests, time, random
 from datetime import datetime
 from time import strftime
 from requests.auth import HTTPBasicAuth
+from hurry.filesize import size
+
+UNIT_SIZE = 1900000000000 # 1.9 TB (actual is 1,953,378,644,000). Needs python >= 2.5
+IDENTIFIER_BASE = 'file:///T:WORK/RW_32/content/'
 
 def main(argv):
     uname, pwd, ifname, ofname = getParms()
     # try opening the files    
     try:
-        fhi = open(ifname, "rb")
-    except IOError:
-        print "Error: can\'t find file or read data"
-    else:
-        try:
-            fho = open(ofname, "wb")
+        with open(ifname, "rb") as fhi, open(ofname, "wb") as fho:
             # writer = csv.writer(fho, delimiter=',', quotechar='"', quoting=csv.QUOTE_ALL)
-            fields = ['identifier','filename','folder','date_created','checksum','series_number','creating_body','crawl_start', 'crawl_end', 'filesize', 'unit']
-            writer = csv.DictWriter(fho, delimiter=',', fieldnames=fields)
+            fields = ['identifier','filename','folder','date_created','checksum', \
+                      'series_number','creating_body','crawl_start', 'crawl_end', \
+                      'filesize', 'unit']
+            writer = DictWriter(fho, delimiter=',', fieldnames=fields)
             writer.writerow(dict((fn,fn) for fn in fields))
-        except IOError:
-            print "Error: can\'t open output csv file"
-        else:
-            print "Opened files successfully"
+            print "[INFO] Opened files successfully."
             groupFiles(uname, pwd, fhi, writer)
-            fhi.close()
-            fho.close()
+    except IOError:
+        print "[ERROR] Can't open '%s' file !" % ifname
 
-# Process an input list of Arc filenames, generating one CSV row for
-# each filename. Each row contains most of the values that will be needed for the
-# metadata (though not the checksum), as well as the allocation of each file to a drive
 def groupFiles(uname, pwd, fhi, writer):
+    """
+    Process an input list of Arc filenames, generating one CSV row for each 
+    filename. Each row contains most of the values that will be needed for the
+    metadata (though not the checksum), as well as the allocation of each file to a drive
+    """
     # define constants
     # list of available drives by label
-    units = ['246','247','248','249','250','251','252','253','254','255']
+    units = range(246,256)
     # size of each drive
-    unitSize = 1,900,000,000,000 # 1.9 TB (actual is 1,953,378,644,000). Needs python >= 2.5
-    general_pattern = re.compile('^(.*)[\-P](\d{6,17})[^\d](\d{1,5})?[^\d].*$')
-    tna_extracted_pattern = re.compile('^(.*\-(\d{4}))\-part\-(\d{8}).*$')
+    #general_pattern = re.compile('^(.*)[\-P](\d{6,17})[^\d](\d{1,5})?[^\d].*$')
+    #tna_extracted_pattern = re.compile('^(.*\-(\d{4}))\-part\-(\d{8}).*$')
     #bl_old_pattern = re.compile('BL-\d{6}(\_\d+)?\-?(\d{8,14})?\-?(\d{5})?\.arc\.gz$')
     #bl_old_pattern = re.compile('BL\-\d{6,8}\.arc\.gz$')
     #bl_new_pattern = re.compile('(BL\-\d{6}(?:\_\d+))\-?(\d{8,14})?\-?(\d{5})?\.arc\.gz$')
-    identifierBase = 'file:///T:WORK/RW_32/content/'
-    blankRow = {'identifier':'', 'filename':'', 'folder': '', 'date_created':'', 'checksum':'', 'series_number':'', 'creating_body':'IMF', 'crawl_start':'', 'crawl_end':'', 'filesize':'', 'unit':''}
-    
+    blankRow = {'identifier':'', 'filename':'', 'folder': '', 'date_created':'', \
+                'checksum':'', 'series_number':'', 'creating_body':'IMF', \
+                'crawl_start':'', 'crawl_end':'', 'filesize':'', 'unit':''}
     # initialise variables
     # array of files for one folder
     crawl = []
@@ -69,25 +72,24 @@ def groupFiles(uname, pwd, fhi, writer):
         # establish the size of the file
         arcSize = getArcSize(uname, pwd, line)
         runningTotal += long(arcSize)
-        print runningTotal
+        print "[INFO] Total arcs size : %s" % size(runningTotal)
         # check whether we neeed to move to a new drive
-        if runningTotal >= unitSize:
+        if runningTotal >= UNIT_SIZE:
             unit = units.pop(0)
             runningTotal = arcSize
-        # parse the filename
-        parts = re.split('/', line)    
-        filename = parts[len(parts)-1].rstrip()
+        # parse the filename 
+        filename = line.split('/')[-1].rstrip()
         if filename[:14] == 'TNA-EXTRACTED-':
-            pattern = tna_extracted_pattern
+            pattern = re.compile('^(.*\-(\d{4}))\-part\-(\d{8}).*$')
         else:
-            pattern = general_pattern
+            pattern = re.compile('^(.*)[\-P](\d{6,17})[^\d](\d{1,5})?[^\d].*$')
         parts = re.match(pattern, filename)
         if not parts:  # filename does not match regex - these should be RARE
             # print previous crawl, if any
             printCrawl(writer, crawl, date)
             crawl = []
             dir = filename
-            uriBase = identifierBase + dir 
+            uriBase = IDENTIFIER_BASE + dir 
             # make directory of one file, with same name as directory
             row = blankRow.copy()
             row['identifier']= uriBase
@@ -110,7 +112,7 @@ def groupFiles(uname, pwd, fhi, writer):
             printCrawl(writer, crawl, date)
             crawl = []
             dir = newdir
-            uriBase = identifierBase + dir 
+            uriBase = IDENTIFIER_BASE + dir 
             # create the new folder row
             row = blankRow.copy()
             row['identifier']= uriBase
@@ -138,30 +140,35 @@ def groupFiles(uname, pwd, fhi, writer):
         # print(row) 
 
     #need to flush final crawl
-    printCrawl(writer, crawl, date)     
-    print "nonfits: " + `nonfits`
+    printCrawl(writer, crawl, date)
+    print "[INFO] nonfits: " + `nonfits`
 
-# find the size of an Arc file by making a HEAD call to the url
-# and parsing the result
 def getArcSize(uname, pwd, url):
+    """
+    find the size of an Arc file by making a HEAD call to the url and parsing
+    the result.
+    """
     user_agent = {'User-agent': 'processLists'}
     h = requests.head(url.strip(),headers=user_agent,auth=HTTPBasicAuth(uname, pwd))
-    print h.status_code
+    print "[INFO] HTTP Status : %s" % h.status_code
     if h.status_code == 302:
-        print h.headers['Location']
-        h = requests.head(h.headers['Location'],headers=user_agent,auth=HTTPBasicAuth(uname, pwd))
-    time.sleep(random.randint(1,7))
-    if 'content-length' in h.headers:    
+        print "[INFO] HTTP Location : %s" % h.headers['Location']
+        h = requests.head(h.headers['Location'], headers=user_agent, \
+                          auth=HTTPBasicAuth(uname, pwd))
+    # random sleep between 0.1 and 0.7 second (do not stress the server)
+    time.sleep(random.randint(1,7) / 10.0) 
+    if 'content-length' in h.headers:
         return h.headers['content-length']
     else:
-        print h.status_code
-        print h.headers
+        print "[ERROR] HTTP Status : %s" % h.status_code
+        print "[DEBUG] HTTP Header : %s" % h.headers
         return 0
 
-
-# convert multiple date formats to ISO8601
-# Probably false assumption made that times are UTC
 def dateConvert(date):
+    """
+    Convert multiple date formats to ISO8601 Probably false assumption made
+    that times are UTC.
+    """
     # print date
     # just a year
     if len(date) == 4:
@@ -179,19 +186,22 @@ def dateConvert(date):
         date = '*' + date # should never happen
     return date
         
-
-# print all rows within a crawl folder, including the folder itself
 def printCrawl(writer, crawl, end_date):
+    """
+    Print all rows within a crawl folder, including the folder itself.
+    """
     for row in crawl:
         row['crawl_end'] = end_date
         writer.writerow(row)
-        
-# get command line parameters        
+
 def getParms():
+    """
+    Get command line parameters.
+    """
     ifile = ofile = uname = pwd = ""
     try:
-        myopts, args = getopt.getopt(sys.argv[1:],"u:p:i:o:")
-    except getopt.GetoptError as e:
+        myopts, args = getopt(sys.argv[1:],"u:p:i:o:")
+    except GetoptError as e:
         print (str(e))
         usage()
  
@@ -205,21 +215,15 @@ def getParms():
         elif o == '-p':
             pwd = a
 
-    if not uname:
-        usage()
-    if not pwd:
-        usage()
-    if not ifile:
-        usage()
-    if not ofile:
+    if not (uname and pwd and ifile and ofile):
         usage()
 
     return (uname, pwd, ifile, ofile)
 
 def usage():
-        print("Usage: %s -u username -p password -i input -o output" % sys.argv[0])
-        sys.exit(2)
-    
+    print("Usage: %s -u username -p password -i input -o output" % sys.argv[0])
+    sys.exit(2)
+
 
 if __name__ == "__main__":
    main(sys.argv[1:])
