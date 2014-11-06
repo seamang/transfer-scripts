@@ -12,6 +12,9 @@ from datetime import datetime
 from time import strftime
 from requests.auth import HTTPBasicAuth
 
+UNIT_SIZE = 1900000000000 # 1.9 TB (actual is 1,953,378,644,000). Needs python >= 2.5
+IDENTIFIER_BASE = 'file:///T:WORK/RW_32/content/'
+
 def main(argv):
     uname, pwd, ifname, ofname = getParms()
     # try opening the files    
@@ -38,13 +41,11 @@ def groupFiles(uname, pwd, fhi, writer):
     # list of available drives by label
     units = range(246,256)
     # size of each drive
-    unitSize = 1,900,000,000,000 # 1.9 TB (actual is 1,953,378,644,000). Needs python >= 2.5
     #general_pattern = re.compile('^(.*)[\-P](\d{6,17})[^\d](\d{1,5})?[^\d].*$')
     #tna_extracted_pattern = re.compile('^(.*\-(\d{4}))\-part\-(\d{8}).*$')
     #bl_old_pattern = re.compile('BL-\d{6}(\_\d+)?\-?(\d{8,14})?\-?(\d{5})?\.arc\.gz$')
     #bl_old_pattern = re.compile('BL\-\d{6,8}\.arc\.gz$')
     #bl_new_pattern = re.compile('(BL\-\d{6}(?:\_\d+))\-?(\d{8,14})?\-?(\d{5})?\.arc\.gz$')
-    identifierBase = 'file:///T:WORK/RW_32/content/'
     blankRow = {'identifier':'', 'filename':'', 'folder': '', 'date_created':'', \
                 'checksum':'', 'series_number':'', 'creating_body':'IMF', \
                 'crawl_start':'', 'crawl_end':'', 'filesize':'', 'unit':''}
@@ -73,7 +74,7 @@ def groupFiles(uname, pwd, fhi, writer):
         runningTotal += long(arcSize)
         print "[INFO] Total arcs size : %s" % runningTotal
         # check whether we neeed to move to a new drive
-        if runningTotal >= unitSize:
+        if runningTotal >= UNIT_SIZE:
             unit = units.pop(0)
             runningTotal = arcSize
         # parse the filename 
@@ -88,7 +89,7 @@ def groupFiles(uname, pwd, fhi, writer):
             printCrawl(writer, crawl, date)
             crawl = []
             dir = filename
-            uriBase = identifierBase + dir 
+            uriBase = IDENTIFIER_BASE + dir 
             # make directory of one file, with same name as directory
             row = blankRow.copy()
             row['identifier']= uriBase
@@ -111,7 +112,7 @@ def groupFiles(uname, pwd, fhi, writer):
             printCrawl(writer, crawl, date)
             crawl = []
             dir = newdir
-            uriBase = identifierBase + dir 
+            uriBase = IDENTIFIER_BASE + dir 
             # create the new folder row
             row = blankRow.copy()
             row['identifier']= uriBase
