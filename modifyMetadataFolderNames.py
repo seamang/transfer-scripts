@@ -17,7 +17,10 @@ from shutil import move
 IDENTIFIER_BASE = 'file:///T:WORK/RW_32/content/'
 
 def main(argv):
-    mountpoint, ifname, ofname = getParms()
+    mountpoint, ofname = getParms()
+    if not mountpoint.endswith('/'):
+        mountpoint = mountpoint  + '/'
+    ifname = mountpoint + 'RW_32/metadata_v7.csv'
     # try opening the files    
     try:
         #scl enable python27 bash
@@ -64,9 +67,9 @@ def getParms():
     """
     Get command line parameters.
     """
-    mountpoint = ifile = ofile = ""
+    mountpoint = ofile = ""
     try:
-        myopts, args = getopt(sys.argv[1:],"m:i:o:")
+        myopts, args = getopt(sys.argv[1:],"m:o:")
     except GetoptError as e:
         print (str(e))
         usage()
@@ -74,18 +77,16 @@ def getParms():
     for o, a in myopts:
         if o == '-m':
             mountpoint = a
-        elif o == '-i':
-            ifile = a
         elif o == '-o':
             ofile = a
 
-    if not (mountpoint and ifile and ofile):
+    if not (mountpoint and ofile):
         usage()
 
-    return (ifile, ofile)
+    return (mountpoint, ofile)
 
 def usage():
-    print("Usage: %s -m mountpoint -i inputmetadata  -o outputmetadata" % sys.argv[0])
+    print("Usage: %s -m mountpoint -o outputmetadata" % sys.argv[0])
     sys.exit(2)
 
 
