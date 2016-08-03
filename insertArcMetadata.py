@@ -3,7 +3,8 @@
 Processes a list of arc file names to insert into a CSV file of
 metadata for each file, where these files have been accidentally
 ommitted from the original metadata.
-Assumes the file list groups crawls together in date ascending order
+Assumes the file list groups crawls together in date ascending order,
+but the output after this will not be.
 """
 
 from getopt import getopt, GetoptError
