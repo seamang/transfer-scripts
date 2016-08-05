@@ -49,7 +49,6 @@ def modifyMetadata(mountpoint, reader, writer):
             old_identifier = row['identifier']
             row['identifier'] = row['identifier'] + '_' + start_date
             row['filename'] = row['filename'] + '_' + start_date
-            # TODO move the folder!
             old_identifier = old_identifier.replace('file:///T:WORK/', mountpoint)
             new_identifier = row['identifier']
             new_identifier = new_identifier.replace('file:///T:WORK/', mountpoint)
